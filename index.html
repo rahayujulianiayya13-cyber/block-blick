@@ -34,7 +34,7 @@
 <body>
 
   <canvas id="gameCanvas" width="320" height="480"></canvas>
-  <p>Ketuk layar atau tekan Spasi untuk terbang!</p>
+  <p>Ketuk layar HP untuk terbang!</p>
 
   <script>
     const canvas = document.getElementById("gameCanvas");
@@ -45,7 +45,9 @@
     let gravity = 0.35;
     let jump = -6;
     let score = 0;
-    let gameOver = false;
+    
+    // Status Game: 'START' (Layar Awal), 'PLAYING' (Main), 'GAMEOVER' (Kalah)
+    let gameState = 'START'; 
 
     let pipes = [];
     let frame = 0;
@@ -55,20 +57,21 @@
       velocity = 0;
       score = 0;
       pipes = [];
-      gameOver = false;
+      frame = 0;
+      gameState = 'PLAYING';
     }
 
     function draw() {
-      // Background
+      // 1. Background
       ctx.fillStyle = "#70c5ce";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      if (!gameOver) {
-        // Update Burung
+      // 2. Logic saat GAME PLAYING
+      if (gameState === 'PLAYING') {
         velocity += gravity;
         birdY += velocity;
 
-        // Pipa Baru
+        // Buat Pipa Baru
         if (frame % 90 === 0) {
           let topPipeHeight = Math.floor(Math.random() * 200) + 50;
           let gap = 120;
@@ -79,15 +82,13 @@
           });
         }
 
-        // Move & Draw Pipa
+        // Gambar & Geser Pipa
         ctx.fillStyle = "green";
         for (let i = 0; i < pipes.length; i++) {
           let p = pipes[i];
           p.x -= 2;
 
-          // Pipa Atas
           ctx.fillRect(p.x, 0, 40, p.top);
-          // Pipa Bawah
           ctx.fillRect(p.x, canvas.height - p.bottom, 40, p.bottom);
 
           // Cek Tabrakan
@@ -95,61 +96,81 @@
             (30 + 20 > p.x && 30 < p.x + 40) &&
             (birdY < p.top || birdY + 20 > canvas.height - p.bottom)
           ) {
-            gameOver = true;
+            gameState = 'GAMEOVER';
           }
 
-          // Skor
+          // Tambah Skor
           if (p.x === 30) {
             score++;
           }
         }
 
-        // Hapus Pipa Lewat
+        // Hapus pipa yang keluar layar
         if (pipes.length > 0 && pipes[0].x < -40) {
           pipes.shift();
         }
 
-        // Cek Jatuh
+        // Cek Jatuh ke Bawah / Terlalu Tinggi
         if (birdY + 20 >= canvas.height || birdY <= 0) {
-          gameOver = true;
+          gameState = 'GAMEOVER';
         }
 
         frame++;
       }
 
-      // Draw Burung
+      // 3. Gambar Burung
       ctx.fillStyle = "yellow";
       ctx.beginPath();
       ctx.arc(40, birdY, 12, 0, Math.PI * 2);
       ctx.fill();
 
-      // Draw Skor
+      // 4. Tampilan Skor
       ctx.fillStyle = "white";
       ctx.font = "20px Arial";
       ctx.fillText("Skor: " + score, 15, 30);
 
-      // Game Over Screen
-      if (gameOver) {
-        ctx.fillStyle = "rgba(0,0,0,0.5)";
+      // 5. LAYAR START (Tampilan Awal Sebelum Main)
+      if (gameState === 'START') {
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         ctx.fillStyle = "white";
-        ctx.font = "24px Arial";
+        ctx.font = "bold 26px Arial";
         ctx.textAlign = "center";
-        ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 10);
+        ctx.fillText("FLAPPY BIRD", canvas.width / 2, canvas.height / 2 - 30);
+        
         ctx.font = "16px Arial";
-        ctx.fillText("Ketuk untuk Main Lagi", canvas.width / 2, canvas.height / 2 + 30);
+        ctx.fillText("Ketuk Layar untuk Start!", canvas.width / 2, canvas.height / 2 + 20);
+        ctx.textAlign = "start";
+      }
+
+      // 6. LAYAR GAME OVER (Saat Kalah)
+      if (gameState === 'GAMEOVER') {
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "white";
+        ctx.font = "bold 24px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 20);
+        
+        ctx.font = "16px Arial";
+        ctx.fillText("Skor Akhir: " + score, canvas.width / 2, canvas.height / 2 + 15);
+        ctx.fillText("Ketuk untuk Main Lagi", canvas.width / 2, canvas.height / 2 + 50);
         ctx.textAlign = "start";
       }
 
       requestAnimationFrame(draw);
     }
 
+    // Fungsi Kontrol Sentuhan Layar
     function action() {
-      if (gameOver) {
+      if (gameState === 'START') {
         resetGame();
-      } else {
+      } else if (gameState === 'PLAYING') {
         velocity = jump;
+      } else if (gameState === 'GAMEOVER') {
+        resetGame();
       }
     }
 
