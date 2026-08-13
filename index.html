@@ -59,9 +59,49 @@
     const ctx = canvas.getContext("2d");
     const startBtn = document.getElementById("startBtn");
 
-    // Sound Generator (Web Audio API)
+    // Audio Synthesizer Context
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    
+
+    // 🎵 SYSTEM BACKSOUND MUSIK
+    let musicInterval = null;
+    const melody = [261.63, 293.66, 329.63, 349.23, 392.00, 329.63, 349.23, 392.00]; // Nada Musik C-D-E-F-G
+    let noteIndex = 0;
+
+    function startBacksound() {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      stopBacksound(); // Pastikan tidak ada musik ganda
+
+      // Mainkan melodi berulang tiap 250ms
+      musicInterval = setInterval(() => {
+        if (gameState !== 'PLAYING') return;
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = 'triangle'; // Suara instrumen lembut
+        osc.frequency.setValueAtTime(melody[noteIndex], audioCtx.currentTime);
+
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime); // Volume sedang
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.2);
+
+        noteIndex = (noteIndex + 1) % melody.length;
+      }, 250);
+    }
+
+    function stopBacksound() {
+      if (musicInterval) {
+        clearInterval(musicInterval);
+        musicInterval = null;
+      }
+    }
+
+    // 🔊 EFEK SUARA MAKAN DAGING
     function playEatSound() {
       if (audioCtx.state === 'suspended') audioCtx.resume();
       const osc = audioCtx.createOscillator();
@@ -77,6 +117,7 @@
       osc.stop(audioCtx.currentTime + 0.15);
     }
 
+    // 💥 EFEK SUARA BOM
     function playExplodeSound() {
       if (audioCtx.state === 'suspended') audioCtx.resume();
       const osc = audioCtx.createOscillator();
@@ -92,7 +133,7 @@
       osc.stop(audioCtx.currentTime + 0.3);
     }
 
-    // State Variables
+    // Game Variables
     let sharkY = 200;
     let sharkVelocity = 0;
     let gravity = 0.25;
@@ -106,7 +147,7 @@
     let bubbles = [];
     let frame = 0;
 
-    // Buat Gelembung Air Background
+    // Gelembung Background
     for (let i = 0; i < 15; i++) {
       bubbles.push({
         x: Math.random() * canvas.width,
@@ -127,10 +168,13 @@
       startBtn.innerText = "BERENANG... 🌊";
       startBtn.disabled = true;
       startBtn.style.opacity = "0.5";
+
+      startBacksound(); // Mulai Musik Pantai
     }
 
     function triggerGameOver() {
-      playExplodeSound();
+      stopBacksound(); // Hentikan Musik
+      playExplodeSound(); // Suara Ledakan
       gameState = 'GAMEOVER';
       startBtn.innerText = "MAIN LAGI 🔄";
       startBtn.disabled = false;
@@ -142,13 +186,13 @@
       ctx.save();
       ctx.translate(x, y);
 
-      // Badan Hiu
+      // Badan
       ctx.fillStyle = "#90e0ef";
       ctx.beginPath();
       ctx.ellipse(0, 0, 25, 15, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Sirip Atas
+      // Sirip
       ctx.fillStyle = "#00b4d8";
       ctx.beginPath();
       ctx.moveTo(-5, -12);
@@ -189,11 +233,11 @@
     }
 
     function draw() {
-      // 1. Background Laut
+      // Background Laut
       ctx.fillStyle = "#0077b6";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Animasi Gelembung
+      // Gelembung
       ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
       bubbles.forEach(b => {
         b.y -= b.speed;
@@ -204,7 +248,6 @@
       });
 
       if (gameState === 'PLAYING') {
-        // Gravitasi Hiu
         if (isSwimming) {
           sharkVelocity = swimUp;
         } else {
@@ -212,11 +255,10 @@
         }
         sharkY += sharkVelocity;
 
-        // Batas Layar
         if (sharkY < 20) sharkY = 20;
         if (sharkY > canvas.height - 20) triggerGameOver();
 
-        // Spawn Daging (Item Tambah Skor)
+        // Spawn Daging
         if (frame % 80 === 0) {
           meats.push({
             x: canvas.width + 20,
@@ -224,7 +266,7 @@
           });
         }
 
-        // Spawn Bom (Ranjau)
+        // Spawn Bom
         if (frame % 130 === 0) {
           bombs.push({
             x: canvas.width + 20,
@@ -232,20 +274,16 @@
           });
         }
 
-        // Olah Daging
+        // Daging
         for (let i = meats.length - 1; i >= 0; i--) {
           let m = meats[i];
           m.x -= 2.5;
 
-          // Gambar Daging
           ctx.fillStyle = "#ef233c";
           ctx.beginPath();
           ctx.arc(m.x, m.y, 10, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = "#white";
-          ctx.fillRect(m.x - 4, m.y - 2, 8, 4);
 
-          // Cek Dimakan Hiu
           let dist = Math.hypot(50 - m.x, sharkY - m.y);
           if (dist < 30) {
             playEatSound();
@@ -256,17 +294,16 @@
           }
         }
 
-        // Olah Bom
+        // Bom
         for (let i = bombs.length - 1; i >= 0; i--) {
           let b = bombs[i];
           b.x -= 3;
 
-          // Gambar Ranjau Laut
           ctx.fillStyle = "#212529";
           ctx.beginPath();
           ctx.arc(b.x, b.y, 12, 0, Math.PI * 2);
           ctx.fill();
-          // Duri Bom
+
           ctx.strokeStyle = "#d90429";
           ctx.lineWidth = 3;
           ctx.beginPath();
@@ -274,7 +311,6 @@
           ctx.moveTo(b.x, b.y - 16); ctx.lineTo(b.x, b.y + 16);
           ctx.stroke();
 
-          // Cek Tabrak Bom
           let dist = Math.hypot(50 - b.x, sharkY - b.y);
           if (dist < 28) {
             triggerGameOver();
@@ -286,15 +322,14 @@
         frame++;
       }
 
-      // Gambar Hiu Utama
       drawShark(50, sharkY);
 
-      // Tampilan Skor
+      // Skor
       ctx.fillStyle = "#ffb703";
       ctx.font = "bold 20px Arial";
       ctx.fillText("SKOR: " + score, 15, 35);
 
-      // Layar Awal (START)
+      // Start Screen
       if (gameState === 'START') {
         ctx.fillStyle = "rgba(0,0,0,0.6)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -312,7 +347,7 @@
         ctx.textAlign = "start";
       }
 
-      // Layar Game Over
+      // Game Over Screen
       if (gameState === 'GAMEOVER') {
         ctx.fillStyle = "rgba(0,0,0,0.7)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -331,14 +366,12 @@
       requestAnimationFrame(draw);
     }
 
-    // Tombol Start
     startBtn.addEventListener("click", function() {
       if (gameState === 'START' || gameState === 'GAMEOVER') {
         resetGame();
       }
     });
 
-    // Kontrol Berenang (Tahan Layar / Spasi untuk Naik)
     function startSwim(e) {
       if (gameState === 'PLAYING' && e.target !== startBtn) {
         isSwimming = true;
