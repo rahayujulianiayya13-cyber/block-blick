@@ -7,7 +7,7 @@
   <style>
     body {
       margin: 0;
-      padding: 0;
+      padding: 10px;
       background-color: #70c5ce;
       display: flex;
       flex-direction: column;
@@ -15,6 +15,7 @@
       justify-content: center;
       min-height: 100vh;
       font-family: sans-serif;
+      box-sizing: border-box;
       touch-action: manipulation;
     }
     canvas {
@@ -23,57 +24,81 @@
       box-shadow: 0 4px 10px rgba(0,0,0,0.3);
       max-width: 100%;
     }
-    p {
-      margin-top: 10px;
+    .btn-container {
+      margin-top: 15px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      font-size: 18px;
       font-weight: bold;
-      color: #fff;
-      text-shadow: 1px 1px 2px #000;
+      border-radius: 8px;
+      box-shadow: 0 4px #2e7d32;
+      cursor: pointer;
+    }
+    button:active {
+      box-shadow: 0 2px #2e7d32;
+      transform: translateY(2px);
     }
   </style>
 </head>
 <body>
 
-  <canvas id="gameCanvas" width="320" height="480"></canvas>
-  <p>Ketuk layar HP untuk terbang!</p>
+  <canvas id="gameCanvas" width="320" height="420"></canvas>
+
+  <div class="btn-container">
+    <button id="startBtn">MULAI GAME 🚀</button>
+  </div>
 
   <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
+    const startBtn = document.getElementById("startBtn");
 
-    let birdY = 200;
+    let birdY = 180;
     let velocity = 0;
     let gravity = 0.35;
     let jump = -6;
     let score = 0;
     
-    // Status Game: 'START' (Layar Awal), 'PLAYING' (Main), 'GAMEOVER' (Kalah)
+    // Status: 'START' (Belum Mulai), 'PLAYING' (Main), 'GAMEOVER' (Kalah)
     let gameState = 'START'; 
 
     let pipes = [];
     let frame = 0;
 
     function resetGame() {
-      birdY = 200;
+      birdY = 180;
       velocity = 0;
       score = 0;
       pipes = [];
       frame = 0;
       gameState = 'PLAYING';
+      startBtn.innerText = "GAME BERJALAN...";
+      startBtn.disabled = true; // Matikan tombol saat game main
+      startBtn.style.opacity = "0.6";
+    }
+
+    function triggerGameOver() {
+      gameState = 'GAMEOVER';
+      startBtn.innerText = "MAIN LAGI 🔄";
+      startBtn.disabled = false; // Aktifkan lagi tombolnya pas kalah
+      startBtn.style.opacity = "1";
     }
 
     function draw() {
-      // 1. Background
+      // Background
       ctx.fillStyle = "#70c5ce";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // 2. Logic saat GAME PLAYING
       if (gameState === 'PLAYING') {
         velocity += gravity;
         birdY += velocity;
 
-        // Buat Pipa Baru
         if (frame % 90 === 0) {
-          let topPipeHeight = Math.floor(Math.random() * 200) + 50;
+          let topPipeHeight = Math.floor(Math.random() * 180) + 40;
           let gap = 120;
           pipes.push({
             x: canvas.width,
@@ -82,7 +107,6 @@
           });
         }
 
-        // Gambar & Geser Pipa
         ctx.fillStyle = "green";
         for (let i = 0; i < pipes.length; i++) {
           let p = pipes[i];
@@ -91,60 +115,57 @@
           ctx.fillRect(p.x, 0, 40, p.top);
           ctx.fillRect(p.x, canvas.height - p.bottom, 40, p.bottom);
 
-          // Cek Tabrakan
+          // Cek Tabrakan Pipa
           if (
             (30 + 20 > p.x && 30 < p.x + 40) &&
             (birdY < p.top || birdY + 20 > canvas.height - p.bottom)
           ) {
-            gameState = 'GAMEOVER';
+            triggerGameOver();
           }
 
-          // Tambah Skor
           if (p.x === 30) {
             score++;
           }
         }
 
-        // Hapus pipa yang keluar layar
         if (pipes.length > 0 && pipes[0].x < -40) {
           pipes.shift();
         }
 
-        // Cek Jatuh ke Bawah / Terlalu Tinggi
+        // Cek Jatuh
         if (birdY + 20 >= canvas.height || birdY <= 0) {
-          gameState = 'GAMEOVER';
+          triggerGameOver();
         }
 
         frame++;
       }
 
-      // 3. Gambar Burung
+      // Gambar Burung
       ctx.fillStyle = "yellow";
       ctx.beginPath();
       ctx.arc(40, birdY, 12, 0, Math.PI * 2);
       ctx.fill();
 
-      // 4. Tampilan Skor
+      // Skor
       ctx.fillStyle = "white";
       ctx.font = "20px Arial";
       ctx.fillText("Skor: " + score, 15, 30);
 
-      // 5. LAYAR START (Tampilan Awal Sebelum Main)
+      // Tampilan Belum Mulai (START)
       if (gameState === 'START') {
         ctx.fillStyle = "rgba(0,0,0,0.4)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         ctx.fillStyle = "white";
-        ctx.font = "bold 26px Arial";
+        ctx.font = "bold 24px Arial";
         ctx.textAlign = "center";
-        ctx.fillText("FLAPPY BIRD", canvas.width / 2, canvas.height / 2 - 30);
-        
-        ctx.font = "16px Arial";
-        ctx.fillText("Ketuk Layar untuk Start!", canvas.width / 2, canvas.height / 2 + 20);
+        ctx.fillText("FLAPPY BIRD", canvas.width / 2, canvas.height / 2 - 10);
+        ctx.font = "14px Arial";
+        ctx.fillText("Klik tombol 'MULAI GAME' di bawah", canvas.width / 2, canvas.height / 2 + 20);
         ctx.textAlign = "start";
       }
 
-      // 6. LAYAR GAME OVER (Saat Kalah)
+      // Tampilan Game Over
       if (gameState === 'GAMEOVER') {
         ctx.fillStyle = "rgba(0,0,0,0.6)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -153,31 +174,39 @@
         ctx.font = "bold 24px Arial";
         ctx.textAlign = "center";
         ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 20);
-        
         ctx.font = "16px Arial";
         ctx.fillText("Skor Akhir: " + score, canvas.width / 2, canvas.height / 2 + 15);
-        ctx.fillText("Ketuk untuk Main Lagi", canvas.width / 2, canvas.height / 2 + 50);
         ctx.textAlign = "start";
       }
 
       requestAnimationFrame(draw);
     }
 
-    // Fungsi Kontrol Sentuhan Layar
-    function action() {
-      if (gameState === 'START') {
+    // Tombol Khusus MULAI / MAIN LAGI
+    startBtn.addEventListener("click", function() {
+      if (gameState === 'START' || gameState === 'GAMEOVER') {
         resetGame();
-      } else if (gameState === 'PLAYING') {
-        velocity = jump;
-      } else if (gameState === 'GAMEOVER') {
-        resetGame();
+      }
+    });
+
+    // KONTROL LOMPAT (Bisa ketuk layar/canvas, klik mouse, atau tombol Spasi)
+    function jumpAction(e) {
+      // Hanya lompat jika game sedang berjalan
+      if (gameState === 'PLAYING') {
+        // Mencegah lompat jika yang diklik adalah tombol start
+        if (e.target !== startBtn) {
+          velocity = jump;
+        }
       }
     }
 
-    window.addEventListener("touchstart", action);
-    window.addEventListener("mousedown", action);
+    window.addEventListener("touchstart", jumpAction);
+    window.addEventListener("mousedown", jumpAction);
     window.addEventListener("keydown", function(e) {
-      if (e.code === "Space") action();
+      if (e.code === "Space") {
+        e.preventDefault();
+        jumpAction(e);
+      }
     });
 
     draw();
